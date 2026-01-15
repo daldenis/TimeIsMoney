@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time is Money - Standalone Demo</title>
+    
+    <!-- External Libraries (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Architects+Daughter&family=Audiowide&family=Bangers&family=Black+Ops+One&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Comfortaa:wght@700&family=Exo+2:wght@800&family=Inter:wght@900&family=Italiana&family=Limelight&family=Monoton&family=Orbitron:wght@900&family=Playfair+Display:ital,wght@1,900&family=Poller+One&family=Press+Start+2P&family=Quicksand:wght@300&family=Rajdhani:wght@700&family=Roboto+Mono:wght@500&family=Rye&family=Share+Tech+Mono&family=Teko:wght@600&family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+      /* --- CSS ANIMATIONS --- */
+      @keyframes gradient-x { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+      .animate-gradient-x { background-size: 200% 200%; animation: gradient-x 15s ease infinite; }
+      @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+      .animate-float { animation: float 6s ease-in-out infinite; }
+      @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 80% { transform: translate(2px, -2px); } 100% { transform: translate(0); } }
+      .animate-glitch { animation: glitch 0.5s cubic-bezier(.25, .46, .45, .94) both infinite; }
+      @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      .animate-pulse-slow { animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      
+      /* Leaf Animations */
+      @keyframes leaf-grow { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 0.9; } }
+      .animate-leaf-grow { transform-origin: 0 0; animation: leaf-grow 60s ease-out forwards; }
+      @keyframes leaf-sway { 0% { transform: rotate(-4deg); } 100% { transform: rotate(4deg); } }
+      .animate-leaf-sway { transform-origin: 0 0; animation: leaf-sway 12s ease-in-out infinite alternate; }
+      
+      /* Flip Clock */
+      .flip-card { position: relative; display: inline-block; perspective: 500px; }
+      .flip-card-inner { position: relative; width: 100%; height: 100%; text-align: center; transform-style: preserve-3d; }
+      .flip-top, .flip-bottom { position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+      .flip-top { top: 0; background-color: inherit; transform-origin: 50% 100%; border-radius: 0.1em 0.1em 0 0; }
+      .flip-bottom { bottom: 0; background-color: inherit; transform-origin: 50% 0%; transform: rotateX(180deg); border-radius: 0 0 0.1em 0.1em; line-height: 0; }
+      .flip-top-content { position: absolute; top: 0; left: 0; width: 100%; height: 200%; display: flex; justify-content: center; align-items: center; }
+      .flip-bottom-content { position: absolute; top: -100%; left: 0; width: 100%; height: 200%; display: flex; justify-content: center; align-items: center; }
+      .flip-anim-top { animation: flipTop 0.6s ease-in forwards; }
+      .flip-anim-bottom { animation: flipBottom 0.6s ease-out forwards; }
+      @keyframes flipTop { 0% { transform: rotateX(0deg); } 100% { transform: rotateX(-180deg); } }
+      @keyframes flipBottom { 0% { transform: rotateX(180deg); } 100% { transform: rotateX(0deg); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- ICONS (Inline SVG components to replace Lucide) ---
+        const IconPlay = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        );
+        const IconPause = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        );
+        const IconRotateCcw = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        );
+        const IconMonitorPlay = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m10 7 5 3-5 3Z"/><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
+        );
+        const IconUsers = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        );
+        const IconSettings = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        );
+        const IconX = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        );
+        const IconMinus = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/></svg>
+        );
+        const IconPlus = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        );
+        const IconDollarSign = ({ size = 24, className }) => (
+             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        );
+
+
+        // --- CONSTANTS ---
+        const TEX_CONCRETE = "https://images.unsplash.com/photo-1518391846015-55a33bbb70ce?q=80&w=2500&auto=format&fit=crop";
+        const TEX_SPACE = "https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?q=80&w=2500&auto=format&fit=crop";
+        const TEX_WOOD = "https://images.unsplash.com/photo-1546484475-7f7bd55792da?q=80&w=2500&auto=format&fit=crop";
+        const TEX_GRAIN = "https://images.unsplash.com/photo-1542204165-65bf26472b9b?q=80&w=2500&auto=format&fit=crop";
+        const TEX_OFFICE = "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2000&auto=format&fit=crop"; 
+
+        const STYLES = [
+            { id: '01', name: 'Gaia', fontFamily: '"Comfortaa", cursive', bgClass: 'bg-gradient-to-b from-slate-900 to-green-950', textClass: 'text-white', accentClass: 'text-green-400', digitAnim: 'blur', backgroundAnim: 'nature-oak', buttonClass: 'bg-green-600/80 backdrop-blur text-white hover:bg-green-500 rounded-full px-8', secondaryButtonClass: 'bg-white/10 backdrop-blur text-white border border-white/30 rounded-full' },
+            { id: '02', name: 'Saloon', fontFamily: '"Rye", serif', bgClass: 'bg-[#3e2723]', textClass: 'text-[#deb887]', accentClass: 'text-[#fff8dc]', bgImage: TEX_WOOD, digitAnim: 'standard', backgroundAnim: 'nature-pine', buttonClass: 'bg-[#281815] text-[#deb887] border-2 border-[#deb887] rounded-sm', secondaryButtonClass: 'text-[#deb887] border border-[#deb887] rounded-sm' },
+            { id: '04', name: 'Mecha', fontFamily: '"Chakra Petch", sans-serif', bgClass: 'bg-slate-100', textClass: 'text-slate-800', accentClass: 'text-blue-600', digitAnim: 'standard', backgroundAnim: 'solid', buttonClass: 'bg-blue-600 text-white shadow-[8px_8px_0_#cbd5e1] active:translate-x-[8px] active:translate-y-[8px] transition-all', secondaryButtonClass: 'bg-white text-blue-600 border-2 border-blue-600' },
+            { id: '05', name: 'Cyberpunk', fontFamily: '"Orbitron", sans-serif', bgClass: 'bg-[#050505]', textClass: 'text-pink-500', accentClass: 'text-cyan-400', digitAnim: 'neon', backgroundAnim: 'abstract-waves', buttonClass: 'bg-cyan-500 text-black shadow-[0_0_15px_#22d3ee] rounded-full', secondaryButtonClass: 'text-pink-500 border border-pink-500 shadow-[0_0_10px_#ec4899] rounded-full' },
+            { id: '06', name: 'Galactic', fontFamily: '"Poller One", cursive', bgClass: 'bg-black', textClass: 'text-yellow-400', accentClass: 'text-yellow-200', bgImage: TEX_SPACE, digitAnim: 'perspective-scroll', backgroundAnim: 'image', buttonClass: 'bg-yellow-400 text-black uppercase tracking-[0.2em] font-bold', secondaryButtonClass: 'text-yellow-400 border border-yellow-400' },
+            { id: '07', name: '8-Bit', fontFamily: '"Press Start 2P", cursive', bgClass: 'bg-[#2b0f54]', textClass: 'text-[#ff00ff]', accentClass: 'text-[#00ffff]', digitAnim: 'standard', backgroundAnim: 'cyber-grid', buttonClass: 'bg-[#ff00ff] text-white shadow-[4px_4px_0_#00ffff] font-xs', secondaryButtonClass: 'border-2 border-white text-white' },
+            { id: '08', name: 'Aero', fontFamily: '"Quicksand", sans-serif', bgClass: 'bg-slate-900', textClass: 'text-white/80', accentClass: 'text-teal-300', digitAnim: 'blur', backgroundAnim: 'aurora', buttonClass: 'bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 rounded-xl', secondaryButtonClass: 'text-teal-300' },
+            { id: '09', name: 'Racer', fontFamily: '"Monoton", cursive', bgClass: 'bg-gray-900', textClass: 'text-white', accentClass: 'text-red-500', digitAnim: 'scroll', backgroundAnim: 'floating-orbs', buttonClass: 'bg-white text-black rounded-full shadow-lg hover:scale-105 transition-transform', secondaryButtonClass: 'bg-black/20 text-white backdrop-blur rounded-full' },
+            { id: '10', name: 'Hacker', fontFamily: '"VT323", monospace', bgClass: 'bg-black', textClass: 'text-[#0f0]', accentClass: 'text-[#cfc]', digitAnim: 'glitch', backgroundAnim: 'matrix-rain', buttonClass: 'border border-[#0f0] text-[#0f0] hover:bg-[#0f0] hover:text-black uppercase', secondaryButtonClass: 'text-[#005500]' },
+            { id: '11', name: 'Helvetica', fontFamily: '"Inter", sans-serif', bgClass: 'bg-[#f0f0f0]', textClass: 'text-black font-black', accentClass: 'text-[#ff3e00]', digitAnim: 'scroll', backgroundAnim: 'solid', buttonClass: 'bg-black text-white hover:bg-zinc-800 rounded-none px-8 font-bold', secondaryButtonClass: 'border-2 border-black text-black hover:bg-black hover:text-white' },
+            { id: '12', name: 'Office', fontFamily: '"Roboto Mono", monospace', bgClass: 'bg-[#fdfbf7]', textClass: 'text-slate-800', accentClass: 'text-amber-600', bgImage: TEX_OFFICE, digitAnim: 'flip', backgroundAnim: 'image-blur', buttonClass: 'bg-slate-800 text-white font-bold uppercase hover:bg-slate-700 shadow-xl', secondaryButtonClass: 'bg-white/50 text-slate-800 border border-slate-300 hover:bg-white' },
+            { id: '13', name: 'Tall Boy', fontFamily: '"Teko", sans-serif', bgClass: 'bg-yellow-300', textClass: 'text-black', accentClass: 'text-purple-700', digitAnim: 'standard', backgroundAnim: 'solid', containerClass: 'bg-white border-4 border-black p-6 rotate-1', buttonClass: 'bg-purple-600 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] uppercase text-2xl', secondaryButtonClass: 'bg-white text-black border-4 border-black' },
+            { id: '14', name: 'Blueprint', fontFamily: '"Architects Daughter", cursive', bgClass: 'bg-[#1e3a8a]', textClass: 'text-white', accentClass: 'text-blue-200', digitAnim: 'handwritten', backgroundAnim: 'cyber-grid', customCSS: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }, buttonClass: 'bg-white text-blue-900 font-bold border-2 border-white', secondaryButtonClass: 'border border-blue-300 text-blue-200' },
+            { id: '15', name: 'Vogue', fontFamily: '"Playfair Display", serif', bgClass: 'bg-zinc-900', textClass: 'text-zinc-400 italic', accentClass: 'text-red-600', digitAnim: '3d', backgroundAnim: 'solid', buttonClass: 'bg-red-600 text-white tracking-widest', secondaryButtonClass: 'bg-zinc-800 text-zinc-400' },
+            { id: '16', name: 'Noir', fontFamily: '"Limelight", cursive', bgClass: 'bg-neutral-900', textClass: 'text-neutral-200', accentClass: 'text-red-500', bgImage: TEX_GRAIN, digitAnim: 'retro-lcd', backgroundAnim: 'retro-film', buttonClass: 'bg-neutral-800 text-white border border-neutral-600 uppercase tracking-widest shadow-lg', secondaryButtonClass: 'border border-neutral-700 text-neutral-500 hover:text-white' },
+            { id: '17', name: 'Cargo', fontFamily: '"Black Ops One", cursive', bgClass: 'bg-neutral-800', textClass: 'text-orange-500/90', accentClass: 'text-white', bgImage: TEX_CONCRETE, digitAnim: 'stencil', backgroundAnim: 'image', buttonClass: 'bg-orange-600 text-white border-2 border-orange-800 font-bold uppercase tracking-wider', secondaryButtonClass: 'bg-neutral-700 text-neutral-300 border border-neutral-500' },
+            { id: '18', name: 'Ka-Pow!', fontFamily: '"Bangers", cursive', bgClass: 'bg-yellow-400', textClass: 'text-red-600', accentClass: 'text-blue-600', digitAnim: 'volumetric', backgroundAnim: 'solid', containerClass: 'bg-white border-[6px] border-black shadow-[8px_8px_0_0_#000] p-8', customCSS: { backgroundImage: 'radial-gradient(#000 20%, transparent 20%)', backgroundSize: '15px 15px' }, buttonClass: 'bg-blue-500 text-white border-4 border-black shadow-[4px_4px_0_#000] uppercase text-2xl tracking-widest', secondaryButtonClass: 'bg-white text-black border-4 border-black' },
+            { id: '19', name: 'Hyperloop', fontFamily: '"Audiowide", cursive', bgClass: 'bg-black', textClass: 'text-emerald-400', accentClass: 'text-emerald-200', digitAnim: 'volumetric', backgroundAnim: 'matrix-rain', layerColor: 'rgba(16, 185, 129, 0.4)', buttonClass: 'border border-emerald-500 text-emerald-400 hover:bg-emerald-900/50 uppercase tracking-[0.2em] text-sm', secondaryButtonClass: 'text-emerald-700 border border-emerald-900' },
+            { id: '20', name: 'Roma', fontFamily: '"Italiana", serif', bgClass: 'bg-stone-200', textClass: 'text-stone-800', accentClass: 'text-amber-700', digitAnim: 'standard', backgroundAnim: 'nature-olive', customCSS: { filter: 'contrast(95%) brightness(105%)' }, buttonClass: 'bg-stone-800 text-stone-100 font-serif border border-stone-500 px-8', secondaryButtonClass: 'text-stone-600 border border-stone-400' },
+            { id: '21', name: 'Prism', fontFamily: '"Exo 2", sans-serif', bgClass: 'bg-gradient-to-br from-sky-100 via-cyan-50 to-blue-100', textClass: 'text-transparent bg-clip-text bg-gradient-to-br from-cyan-600 to-blue-600', accentClass: 'text-cyan-500', digitAnim: 'volumetric', backgroundAnim: 'abstract-waves', layerColor: 'rgba(165, 243, 252, 0.5)', buttonClass: 'bg-cyan-500 text-white shadow-lg hover:bg-cyan-400 rounded-xl font-bold uppercase tracking-wider', secondaryButtonClass: 'bg-white/50 text-slate-600 border border-white/60 hover:bg-white rounded-xl' },
+            { id: '22', name: 'Neon Grid', fontFamily: '"Share Tech Mono", monospace', bgClass: 'bg-black', textClass: 'text-white', accentClass: 'text-cyan-400', digitAnim: 'standard', backgroundAnim: 'canvas-neon-grid', customCSS: { textShadow: '0 0 40px #00ffff, 0 0 80px rgba(255,0,255,0.3)' }, buttonClass: 'bg-white/10 border border-white/20 text-white backdrop-blur-md rounded-xl hover:bg-white/20', secondaryButtonClass: 'text-cyan-400 border border-cyan-400/50 rounded-xl' },
+            { id: '23', name: 'Cosmic Nebula', fontFamily: '"Exo 2", sans-serif', bgClass: 'bg-black', textClass: 'text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-blue-400 to-indigo-400', accentClass: 'text-blue-300', digitAnim: 'standard', backgroundAnim: 'canvas-nebula', customCSS: { filter: 'drop-shadow(0 0 50px rgba(124,58,237,0.5))' }, buttonClass: 'bg-indigo-600/50 border border-indigo-400/30 text-indigo-100 rounded-xl backdrop-blur', secondaryButtonClass: 'text-indigo-300 border border-indigo-300/30 rounded-xl' },
+            { id: '24', name: 'Holo Waves', fontFamily: '"Rajdhani", sans-serif', bgClass: 'bg-black', textClass: 'text-sky-100', accentClass: 'text-sky-400', digitAnim: 'standard', backgroundAnim: 'canvas-holo-waves', customCSS: { textShadow: '0 0 30px #7dd3fc, 0 8px 16px rgba(14,165,233,0.7)' }, buttonClass: 'bg-sky-500/20 border border-sky-400/50 text-sky-100 rounded-xl backdrop-blur', secondaryButtonClass: 'text-sky-300 border border-sky-300/30 rounded-xl' },
+            { id: '25', name: 'Urban Glitch', fontFamily: '"Black Ops One", cursive', bgClass: 'bg-black', textClass: 'text-orange-100', accentClass: 'text-amber-500', digitAnim: 'glitch', backgroundAnim: 'canvas-urban-glitch', customCSS: { textShadow: '2px 2px 0 #f97316, -2px -2px 0 #fbbf24, 0 0 40px rgba(249,115,22,0.7)' }, buttonClass: 'bg-orange-600/40 border border-orange-500/50 text-orange-100 rounded-none uppercase tracking-widest', secondaryButtonClass: 'text-amber-500 border border-amber-500/50 rounded-none' },
+            { id: '26', name: 'Cyber Forest', fontFamily: '"Comfortaa", cursive', bgClass: 'bg-black', textClass: 'text-emerald-200', accentClass: 'text-emerald-500', digitAnim: 'standard', backgroundAnim: 'canvas-cyber-forest', customCSS: { textShadow: '0 0 35px #34d399, 4px 4px 10px rgba(6,95,70,0.5)' }, buttonClass: 'bg-emerald-600/30 border border-emerald-400/40 text-emerald-100 rounded-2xl', secondaryButtonClass: 'text-emerald-400 border border-emerald-400/30 rounded-2xl' },
+            { id: '27', name: 'Natural Calm', fontFamily: '"Playfair Display", serif', bgClass: 'bg-black', textClass: 'text-amber-100', accentClass: 'text-green-300', digitAnim: 'standard', backgroundAnim: 'nature-cherry', customCSS: { textShadow: '0 0 40px rgba(251,191,36,0.7), 0 6px 20px rgba(217,119,6,0.5)' }, buttonClass: 'bg-amber-600/20 border border-amber-400/30 text-amber-100 rounded-full px-10 italic', secondaryButtonClass: 'text-amber-200 border border-amber-200/30 rounded-full italic' },
+            { id: '28', name: 'Neon Synth', fontFamily: '"Share Tech Mono", monospace', bgClass: 'bg-[#05060a]', textClass: 'text-[#EAF6FF]', accentClass: 'text-[#68F0FF]', digitAnim: 'extruded-3d', backgroundAnim: 'canvas-neon-synth', buttonClass: 'bg-[#68F0FF] text-[#05060a] hover:bg-[#B46CFF] hover:text-white transition-colors shadow-[0_0_20px_rgba(104,240,255,0.4)]', secondaryButtonClass: 'text-[#EAF6FF] border border-[#68F0FF]/30 hover:border-[#68F0FF] hover:text-[#68F0FF]' },
+            { id: '29', name: 'Holo Particles', fontFamily: '"Rajdhani", sans-serif', bgClass: 'bg-[#05070b]', textClass: 'text-[#EFFFFB]', accentClass: 'text-[#35FFE3]', digitAnim: 'extruded-3d', backgroundAnim: 'canvas-holo-particles', buttonClass: 'bg-gradient-to-r from-[#35FFE3] to-[#4C86FF] text-[#05070b] font-bold tracking-widest', secondaryButtonClass: 'text-[#35FFE3] border border-[#35FFE3]/40 bg-[#35FFE3]/5' },
+            { id: '30', name: 'Aurora Glass', fontFamily: '"Exo 2", sans-serif', bgClass: 'bg-[#06070a]', textClass: 'text-[#F4F2FF]', accentClass: 'text-[#B7FFFA]', digitAnim: 'extruded-3d', backgroundAnim: 'canvas-aurora-glass', buttonClass: 'bg-[#FF56C2] text-white shadow-[0_0_15px_rgba(255,86,194,0.5)] rounded-full', secondaryButtonClass: 'text-[#B7FFFA] border border-[#B7FFFA]/30 rounded-full' },
+            { id: '31', name: 'Wire City', fontFamily: '"Chakra Petch", sans-serif', bgClass: 'bg-[#07070a]', textClass: 'text-[#F7FBFF]', accentClass: 'text-[#FFD86B]', digitAnim: 'extruded-3d', backgroundAnim: 'canvas-wire-city', buttonClass: 'bg-[#FFD86B] text-black border border-[#FFD86B] font-bold uppercase', secondaryButtonClass: 'text-[#6BE1FF] border border-[#6BE1FF] bg-transparent' },
+            { id: '32', name: 'Deep Nebula', fontFamily: '"Audiowide", cursive', bgClass: 'bg-[#03040a]', textClass: 'text-[#F2ECFF]', accentClass: 'text-[#B17CFF]', digitAnim: 'extruded-3d', backgroundAnim: 'canvas-deep-nebula', buttonClass: 'bg-[#4AF2FF] text-[#1A0F3A] shadow-[0_0_25px_rgba(74,242,255,0.4)] rounded-xl', secondaryButtonClass: 'text-[#FF4AD8] border border-[#FF4AD8]/50 rounded-xl' }
+        ];
+
+        // --- COMPONENTS ---
+        
+        // CONTROLS COMPONENT
+        const Controls = ({ isRunning, onStartStop, onReset, personCount, setPersonCount, hourlyRate, setHourlyRate, currentStyle, onStyleChange, showSettings, toggleSettings }) => {
+            return (
+                <React.Fragment>
+                  <div className={`fixed bottom-0 left-0 right-0 p-4 md:p-6 z-50 transition-all duration-300 ${showSettings ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+                    <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                      
+                      <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+                        <button onClick={onStartStop} className={`px-6 py-3 md:px-8 md:py-4 text-xl font-bold shadow-xl transition-all duration-200 transform active:scale-95 flex items-center gap-2 rounded-xl ${currentStyle.buttonClass}`}>
+                          {isRunning ? <IconPause size={24} /> : <IconPlay size={24} />}
+                          {isRunning ? 'STOP' : 'START'}
+                        </button>
+                        <button onClick={onReset} className={`px-4 py-3 md:py-4 font-bold transition-colors duration-200 rounded-xl ${currentStyle.secondaryButtonClass}`} title="Reset">
+                          <IconRotateCcw size={24} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-4 w-full md:w-auto justify-center bg-black/10 backdrop-blur-md p-2 rounded-2xl md:bg-transparent md:backdrop-blur-none md:p-0">
+                         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-current border-opacity-20 shadow-sm ${currentStyle.textClass} bg-white/5`}>
+                            <IconUsers size={18} className="opacity-70" />
+                            <button onClick={() => setPersonCount(Math.max(1, personCount - 1))} className="p-1 hover:bg-black/10 rounded transition-colors active:scale-90"><IconMinus size={18} /></button>
+                            <div className="flex flex-col items-center min-w-[3rem]">
+                               <span className="font-bold text-xl leading-none">{personCount}</span>
+                               <span className="text-[10px] uppercase opacity-60 leading-none">People</span>
+                            </div>
+                            <button onClick={() => setPersonCount(personCount + 1)} className="p-1 hover:bg-black/10 rounded transition-colors active:scale-90"><IconPlus size={18} /></button>
+                         </div>
+                        <div className="h-8 w-px bg-current opacity-20 hidden md:block"></div>
+                        <button onClick={toggleSettings} className={`p-3 rounded-full hover:bg-white/10 transition-colors ${currentStyle.textClass}`} title="Settings"><IconSettings size={28} /></button>
+                        <button onClick={onStyleChange} className={`p-3 rounded-full hover:bg-white/10 transition-colors ${currentStyle.textClass} flex flex-col items-center`} title="Next Style">
+                            <IconMonitorPlay size={28} />
+                            <span className="text-[9px] uppercase font-bold opacity-60">Style</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {showSettings && (
+                    <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-white text-slate-900 rounded-2xl p-8 max-w-md w-full shadow-2xl animate-[float_4s_ease-in-out_infinite]">
+                        <div className="flex justify-between items-center mb-6">
+                          <h2 className="text-2xl font-bold">Parameters</h2>
+                          <button onClick={toggleSettings} className="p-2 hover:bg-slate-100 rounded-full"><IconX size={24} /></button>
+                        </div>
+                        <div className="space-y-6">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-500 mb-1">Average Hourly Cost per Person (€)</label>
+                            <div className="flex items-center gap-3">
+                              <IconDollarSign className="text-slate-400" />
+                              <input type="number" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(Math.max(0, parseInt(e.target.value) || 0))} className="w-full text-xl font-bold border-b-2 border-slate-200 focus:border-blue-500 outline-none py-2" />
+                            </div>
+                          </div>
+                          <div className="pt-4 border-t border-slate-100"><p className="text-sm text-slate-500 mb-1">Current Style: <span className="font-bold text-slate-900">{currentStyle.name}</span></p></div>
+                          <button onClick={toggleSettings} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors">Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
+            );
+        };
+
+        // --- BACKGROUND RENDERERS ---
+
+        const { useState, useEffect, useRef, useMemo, memo } = React;
+
+        function lerp(a, b, t) { return a + (b-a)*t; }
+        function hexToRgb(hex) {
+            const h = hex.replace('#','').trim();
+            if(h.length===3){ const r = parseInt(h[0]+h[0],16), g=parseInt(h[1]+h[1],16), b=parseInt(h[2]+h[2],16); return [r,g,b]; }
+            const r = parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+            return [r,g,b];
+        }
+        function rgbaFromHex(hex, a) { const [r,g,b] = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+        function getQuadBezierPoint(t, p0, p1, p2) {
+            const oneMinusT = 1 - t;
+            const x = oneMinusT * oneMinusT * p0.x + 2 * oneMinusT * t * p1.x + t * t * p2.x;
+            const y = oneMinusT * oneMinusT * p0.y + 2 * oneMinusT * t * p1.y + t * t * p2.y;
+            return { x, y };
+        }
+
+        const CanvasBackground = memo(({ styleId }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
+                let animationFrameId; let w = 0, h = 0; let t = 0; const DPR = window.devicePixelRatio || 1;
+                const stars = []; const particles = []; const buildings = []; const blobs = [];
+
+                if (styleId === '28') { for(let i=0; i<240; i++) stars.push({ x: Math.random(), y: Math.random(), z: Math.random()*0.8+0.2, tw: Math.random()*0.6+0.2 }); }
+                else if (styleId === '29') { for(let i=0; i<200; i++) particles.push({ x: Math.random(), y: Math.random(), vx:(Math.random()-0.5)*0.00012, vy:(Math.random()-0.5)*0.00010, r: Math.random()*1.6 + 0.6, z: Math.random()*0.85 + 0.15 }); }
+                else if (styleId === '31') { for(let i=0; i<28; i++) buildings.push({ x: Math.random(), w: 0.02 + Math.random()*0.06, h: 0.15 + Math.random()*0.35, d: 0.5 + Math.random()*0.8 }); }
+                else if (styleId === '32') { for(let i=0; i<7; i++) blobs.push({ x: Math.random(), y: Math.random()*0.55 + 0.05, r: 0.18 + Math.random()*0.30, a: 0.07 + Math.random()*0.09, s: 0.5 + Math.random()*1.2, k: Math.random()*Math.PI*2 }); for(let i=0; i<260; i++) stars.push({ x:Math.random(), y:Math.random(), r:Math.random()*1.2+0.3, a:Math.random()*0.10+0.03, tw:Math.random()*0.8+0.2 }); }
+
+                const resize = () => { w = canvas.width = window.innerWidth * DPR; h = canvas.height = window.innerHeight * DPR; canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px'; ctx.scale(DPR, DPR); w = window.innerWidth; h = window.innerHeight; };
+                window.addEventListener('resize', resize); resize();
+
+                const draw = () => {
+                    if (styleId === '22') {
+                        ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(0,0,w,h); ctx.strokeStyle = '#00ffff22';
+                        for (let x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+                        for (let y = 0; y < h; y += 60) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+                        for (let i = 0; i < 60; i++) { const x = (t*0.8 + i*123) % w; const y = (t*1.1 + i*77) % h; ctx.fillStyle = i%2 ? '#00ffff80' : '#ff00ff70'; ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill(); }
+                    } else if (styleId === '23') {
+                        ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(0,0,w,h);
+                        for (let i = 0; i < 7; i++) { const a = t*0.3 + i*0.9; const r = 140 + Math.sin(t*0.6 + i)*90; const x = Math.cos(a)*r + w/2; const y = Math.sin(a)*r + h/2; const g = ctx.createRadialGradient(x,y,0,x,y,380); g.addColorStop(0,'rgba(124,58,237,0.28)'); g.addColorStop(0.5,'rgba(96,165,250,0.16)'); g.addColorStop(1,'transparent'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,380,0,Math.PI*2); ctx.fill(); }
+                    } else if (styleId === '24' || styleId === '25' || styleId === '26' || styleId === '27') { ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(0,0,w,h); }
+                    else if (styleId === '28') {
+                        const bg0="#05060a", bg2="#101a3b", accent="#68F0FF", accent2="#B46CFF"; const g = ctx.createRadialGradient(w*0.5, h*0.18, 0, w*0.5, h*0.18, Math.max(w,h)*0.9); g.addColorStop(0, bg2); g.addColorStop(1, bg0); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+                        ctx.save(); ctx.globalCompositeOperation = "screen"; for(const s of stars){ const tw = (Math.sin(t*0.001*s.tw)+1)*0.5; const x = s.x*w, y=s.y*h*0.55; const r = (0.7 + 1.4*tw) * s.z * 1.15; ctx.fillStyle = `rgba(255,255,255,${0.06 + tw*0.10})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } ctx.restore();
+                        ctx.save(); ctx.globalCompositeOperation = "screen"; const hg = ctx.createLinearGradient(0, h*0.55, 0, h); hg.addColorStop(0, rgbaFromHex(accent2, 0)); hg.addColorStop(0.35, rgbaFromHex(accent2, 0.1)); hg.addColorStop(0.85, rgbaFromHex(accent, 0.06)); hg.addColorStop(1, rgbaFromHex(accent, 0)); ctx.fillStyle = hg; ctx.fillRect(0,h*0.52,w,h*0.48); ctx.restore();
+                        const horizon = h*0.56; const phase = t*0.00025; ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.lineWidth = 1; for(let i=0;i<=26;i++){ const u = i/26; const x = lerp(w*0.08, w*0.92, u); ctx.strokeStyle = i%2===0 ? rgbaFromHex(accent, 0.12) : rgbaFromHex(accent2, 0.10); ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(lerp(w*0.5, x, 0.2), horizon); ctx.stroke(); } for(let j=0;j<=22;j++){ const v = j/22; const y = lerp(horizon, h, v*v); const wobble = Math.sin(phase*2 + v*3.0) * h*0.012 * (1.0 - v); ctx.strokeStyle = rgbaFromHex(accent, 0.10 + (1-v)*0.06); ctx.beginPath(); ctx.moveTo(w*0.08, y + wobble); ctx.lineTo(w*0.92, y - wobble*0.35); ctx.stroke(); } ctx.restore();
+                    } else if (styleId === '29') {
+                        const bg0="#05070b", bg1="#071018", bg2="#082630", accent="#35FFE3", accent2="#4C86FF"; const g = ctx.createLinearGradient(0,0,w,h); g.addColorStop(0, bg2); g.addColorStop(0.5, bg1); g.addColorStop(1, bg0); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+                        const sweepX = (0.25 + 0.5*(Math.sin(t*0.00012)*0.5+0.5)); const s = ctx.createRadialGradient(w*sweepX, h*0.30, 0, w*sweepX, h*0.30, Math.max(w,h)*0.55); s.addColorStop(0, rgbaFromHex(accent2, 0.10)); s.addColorStop(1, rgbaFromHex(accent, 0)); ctx.globalCompositeOperation = "screen"; ctx.fillStyle = s; ctx.fillRect(0,0,w,h); ctx.globalCompositeOperation = "source-over";
+                        ctx.save(); ctx.globalCompositeOperation = "screen"; for(const p of particles){ p.x += p.vx*(0.7+p.z); p.y += p.vy*(0.7+p.z); if(p.x<0) p.x+=1; if(p.x>1) p.x-=1; if(p.y<0) p.y+=1; if(p.y>1) p.y-=1; const px = p.x*w, py = p.y*h, rr = p.r*(0.9+p.z); const a = 0.045 + p.z*0.09; const grad = ctx.createRadialGradient(px,py,0,px,py,rr*6.0); grad.addColorStop(0, `rgba(255,255,255,${a})`); grad.addColorStop(0.4, rgbaFromHex(accent, a*0.85)); grad.addColorStop(1, `rgba(0,0,0,0)`); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(px,py,rr*6.0,0,Math.PI*2); ctx.fill(); } ctx.restore();
+                    } else if (styleId === '30') {
+                        const bg0="#06070a", bg1="#0B1022", bg2="#1B1D42", accent="#B7FFFA", accent2="#FF56C2", accent3="#79FFA8"; const g = ctx.createRadialGradient(w*0.5, h*0.22, 0, w*0.5, h*0.22, Math.max(w,h)*0.95); g.addColorStop(0, bg2); g.addColorStop(0.55, bg1); g.addColorStop(1, bg0); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+                        ctx.save(); ctx.globalCompositeOperation = "screen"; const time = t*0.00025; for(let band=0; band<3; band++){ const y0 = h*(0.18 + band*0.13), amp = h*(0.03 + band*0.01), thickness = h*(0.13 - band*0.02); const grad = ctx.createLinearGradient(0, y0-thickness, 0, y0+thickness); grad.addColorStop(0.2, band===0?rgbaFromHex(accent,0.14):band===1?rgbaFromHex(accent2,0.12):rgbaFromHex(accent3,0.1)); grad.addColorStop(0.5, band===0?rgbaFromHex(accent3,0.1):band===1?rgbaFromHex(accent,0.1):rgbaFromHex(accent2,0.1)); grad.addColorStop(0.8, 'rgba(0,0,0,0)'); ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, y0); for(let x=0; x<=w; x+= w/14){ const nx = x/w; const y = y0 + Math.sin(time*1.6 + nx*5.2 + band)*amp + Math.sin(time*0.7 + nx*11.0 + band*2.4)*amp*0.35; ctx.lineTo(x, y); } ctx.lineTo(w, y0+thickness); ctx.lineTo(0, y0+thickness); ctx.fill(); } ctx.restore();
+                    } else if (styleId === '31') {
+                        const bg0="#07070a", bg2="#121B2A", accent="#6BE1FF", warm="#FFD86B"; const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0, bg2); g.addColorStop(1, bg0); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+                        const baseY = h*0.66; const time = t*0.00022; ctx.save(); ctx.globalCompositeOperation="screen"; ctx.lineWidth = 1.1; for(const b of buildings){ const x = b.x*w + Math.sin(time + b.x*8)*w*0.008; const bw = b.w*w, bh = b.h*h, y = baseY - bh; ctx.strokeStyle = rgbaFromHex(accent, 0.10 + 0.08*(1-b.w)); ctx.strokeRect(x, y, bw, bh); } const originY = baseY; for(let i=0;i<18;i++){ const v = i/18; const yy = lerp(originY, h, v*v); ctx.strokeStyle = rgbaFromHex(accent, 0.10*(1-v)+0.02); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(w, yy); ctx.stroke(); } ctx.restore();
+                    } else if (styleId === '32') {
+                        const bg0="#03040a", bg1="#090820", bg2="#1A0F3A", a1="#B17CFF", a2="#4AF2FF", a3="#FF4AD8"; const g = ctx.createRadialGradient(w*0.52, h*0.22, 0, w*0.52, h*0.22, Math.max(w,h)*0.95); g.addColorStop(0, bg2); g.addColorStop(0.55, bg1); g.addColorStop(1, bg0); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+                        const time = t*0.00018; ctx.save(); ctx.globalCompositeOperation="screen"; for(let i=0;i<blobs.length;i++){ const b = blobs[i]; const cx = (b.x + Math.sin(time*b.s + b.k)*0.03)*w, cy = (b.y + Math.cos(time*b.s + b.k)*0.02)*h, rr = b.r*Math.min(w,h); const col = (i%3===0)?a1:(i%3===1)?a2:a3; const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,rr); grad.addColorStop(0, rgbaFromHex(col, b.a)); grad.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2); ctx.fill(); } for(const s of stars){ const tw = (Math.sin(t*0.001*s.tw)+1)*0.5; const x = s.x*w, y=s.y*h, r = s.r*(0.75 + tw*0.65); ctx.fillStyle = `rgba(255,255,255,${s.a + tw*0.06})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } ctx.restore();
+                    }
+                    t += 16; animationFrameId = requestAnimationFrame(draw);
+                };
+                draw();
+                return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
+            }, [styleId]);
+            return <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />;
+        });
+
+        // --- BACKGROUND RENDERER WRAPPER ---
+        const BackgroundRenderer = memo(({ style, elapsedMs }) => {
+            if (style.backgroundAnim.startsWith('nature-')) {
+                const maxLeaves = 600;
+                // SLOW GROWTH: 1 leaf per second
+                const leafCount = Math.min(Math.floor(elapsedMs / 1000), maxLeaves);
+                
+                const { branches, leafColors, shape, trunkColor } = useMemo(() => {
+                    let branches = [], leafColors = ['#4ade80', '#22c55e', '#16a34a'], shape = 'round', trunkColor = "#3e2723";
+                    if (style.backgroundAnim === 'nature-oak') {
+                        trunkColor = "#2d1b0e";
+                        branches = [ { p0: {x:50, y:100}, p1: {x:50, y:80}, p2: {x:50, y:60}, width: 6 }, { p0: {x:50, y:60}, p1: {x:30, y:40}, p2: {x:15, y:20}, width: 4 }, { p0: {x:50, y:60}, p1: {x:70, y:40}, p2: {x:85, y:20}, width: 4 }, { p0: {x:50, y:70}, p1: {x:20, y:50}, p2: {x:5, y:35}, width: 3 }, { p0: {x:50, y:70}, p1: {x:80, y:50}, p2: {x:95, y:35}, width: 3 }, { p0: {x:50, y:60}, p1: {x:40, y:30}, p2: {x:40, y:10}, width: 3 }, { p0: {x:50, y:60}, p1: {x:60, y:30}, p2: {x:60, y:10}, width: 3 } ];
+                    } else if (style.backgroundAnim === 'nature-pine') {
+                        trunkColor = "#1a120b"; leafColors = ['#14532d', '#166534', '#15803d']; shape = 'needle';
+                        for(let x=10; x<=90; x+=15) branches.push({ p0: {x:x, y:110}, p1: {x:x+(Math.random()*4-2), y:60}, p2: {x:x, y:10}, width: 3 });
+                    } else if (style.backgroundAnim === 'nature-cherry') {
+                        trunkColor = "#4a3b32"; leafColors = ['#fbcfe8', '#f9a8d4', '#f472b6']; shape = 'oval';
+                        branches = [ { p0: {x:-10, y:10}, p1: {x:20, y:40}, p2: {x:50, y:10}, width: 3 }, { p0: {x:110, y:10}, p1: {x:80, y:40}, p2: {x:50, y:10}, width: 3 }, { p0: {x:-10, y:30}, p1: {x:30, y:60}, p2: {x:60, y:30}, width: 2 }, { p0: {x:110, y:30}, p1: {x:70, y:60}, p2: {x:40, y:30}, width: 2 }, { p0: {x:0, y:0}, p1: {x:50, y:50}, p2: {x:100, y:0}, width: 4 } ];
+                    } else if (style.backgroundAnim === 'nature-olive') {
+                        trunkColor = "#44403c"; leafColors = ['#84cc16', '#65a30d', '#a3e635']; shape = 'oval';
+                        branches = [ { p0: {x:0, y:80}, p1: {x:40, y:80}, p2: {x:20, y:20}, width: 4 }, { p0: {x:100, y:80}, p1: {x:60, y:80}, p2: {x:80, y:20}, width: 4 }, { p0: {x:0, y:50}, p1: {x:30, y:40}, p2: {x:10, y:10}, width: 3 }, { p0: {x:100, y:50}, p1: {x:70, y:40}, p2: {x:90, y:10}, width: 3 } ];
+                    }
+                    return { branches, leafColors, shape, trunkColor };
+                }, [style.backgroundAnim, style.id]);
+
+                const leaves = [];
+                const branchPaths = branches.map((b, idx) => (<path key={`b-${idx}`} d={`M${b.p0.x} ${b.p0.y} Q ${b.p1.x} ${b.p1.y} ${b.p2.x} ${b.p2.y}`} stroke={trunkColor} strokeWidth={b.width} fill="none" opacity="0.6" strokeLinecap="round" />));
+                for (let i = 0; i < leafCount; i++) {
+                    const branch = branches[i % branches.length];
+                    const seed = (i * 9301 + 49297) % 233280; const randT = seed / 233280; const t = 0.15 + (randT * 0.8);
+                    const pos = getQuadBezierPoint(t, branch.p0, branch.p1, branch.p2);
+                    const color = leafColors[i % leafColors.length]; const rotation = (i * 137.5) % 360;
+                    let pathD = "M0 0 Q 6 -8 0 -16 Q -6 -8 0 0";
+                    if (shape === 'needle') pathD = "M0 0 L 1.5 -12 L 0 -12 L -1.5 -12 Z"; if (shape === 'oval') pathD = "M0 0 Q 7 -6 0 -14 Q -7 -6 0 0";
+                    leaves.push(<g key={`l-${i}`} transform={`translate(${pos.x} ${pos.y}) rotate(${rotation})`}><g className="animate-leaf-sway" style={{ animationDelay: `${-(i % 10)}s` }}><path d={pathD} fill={color} className="animate-leaf-grow" style={{ transformOrigin: '0 0' }} /></g></g>);
+                }
+                return (<> {style.bgImage && (<div className="absolute inset-0 z-0 bg-cover bg-center opacity-30 pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url(${style.bgImage})` }}></div>)} <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none"><svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full opacity-80">{branchPaths}<g>{leaves}</g></svg></div> </>);
+            }
+            if (style.backgroundAnim === 'image' && style.bgImage) return <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-overlay bg-cover bg-center" style={{ backgroundImage: `url(${style.bgImage})` }} />;
+            if (style.backgroundAnim === 'image-blur' && style.bgImage) return <div className="absolute inset-0 z-0 pointer-events-none opacity-50 blur-sm bg-cover bg-center scale-105" style={{ backgroundImage: `url(${style.bgImage})` }} />;
+            if (style.backgroundAnim === 'retro-film') return (<> {style.bgImage && (<div className="absolute inset-0 z-0 pointer-events-none opacity-20 mix-blend-overlay bg-cover bg-center" style={{ backgroundImage: `url(${style.bgImage})` }} />)} <div className="absolute inset-0 z-0 pointer-events-none bg-white/5 animate-pulse mix-blend-overlay" /> </>);
+            if (style.backgroundAnim === 'solid' || style.backgroundAnim === 'gradient') return null;
+            return <CanvasBackground styleId={style.id} />;
+        });
+
+        // --- DIGIT COMPONENTS ---
+
+        const ExtrudedDigit = memo(({ value }) => {
+          const layers = 10; const shadowLayers = [];
+          for(let i=1; i<=layers; i++) { const opacity = Math.max(0.2, 0.6 - i * (0.4 / layers)); shadowLayers.push(`${i}px ${i}px 0 rgba(0,0,0,${opacity})`); }
+          shadowLayers.push(`0 20px 20px rgba(0,0,0,0.5)`); shadowLayers.push(`0 0 15px currentColor`);
+          return <span className="inline-block mx-1" style={{ transform: 'perspective(1000px) rotateX(10deg)', textShadow: shadowLayers.join(','), color: 'inherit', position: 'relative' }}>{value}</span>;
+        });
+
+        const FlipDigit = memo(({ value }) => {
+          const [prevValue, setPrevValue] = useState(value); const [animate, setAnimate] = useState(false);
+          useEffect(() => { if (value !== prevValue) { setAnimate(true); const timer = setTimeout(() => { setAnimate(false); setPrevValue(value); }, 600); return () => clearTimeout(timer); } }, [value, prevValue]);
+          return (<div className="flip-card inline-block mx-[1px]" style={{ width: '0.6em', height: '1em', fontSize: 'inherit' }}><div className="flip-card-inner bg-[#222] text-[#eee] rounded-sm shadow-md"><div className="flip-top z-0"><div className="flip-top-content">{value}</div></div><div className="flip-bottom z-0" style={{ transform: 'rotateX(0deg)' }}><div className="flip-bottom-content">{prevValue}</div></div>{animate && (<div className="flip-top z-20 flip-anim-top bg-[#222]"><div className="flip-top-content">{prevValue}</div></div>)}{animate && (<div className="flip-bottom z-20 flip-anim-bottom bg-[#222]"><div className="flip-bottom-content">{value}</div></div>)}<div className="absolute top-1/2 left-0 w-full h-[1px] bg-black z-30 opacity-30"></div></div></div>);
+        });
+
+        const StaticStyledDigit = memo(({ value, styleId, isAccent, customCSS }) => {
+            let className = "inline-block mx-1 "; let styles = { ...customCSS };
+            if (styleId === '02') styles = { ...styles, textShadow: '2px 2px 0px #281815, inset 0 0 10px black' };
+            else if (styleId === '04') styles = { ...styles, transform: 'skewX(-10deg)', textShadow: '4px 4px 0px rgba(148, 163, 184, 1)' };
+            else if (styleId === '07') styles = { ...styles, textShadow: '4px 4px 0px #5a189a' };
+            else if (styleId === '13') styles = { ...styles, textShadow: '6px 6px 0px #000' };
+            else if (styleId === '17') styles = { ...styles, textShadow: '0px 2px 0px rgba(255,255,255,0.2)' };
+            else if (styleId === '18') styles = { ...styles, WebkitTextStroke: '2px black', textShadow: '4px 4px 0px #000' };
+            else if (styleId === '20') styles = { ...styles, textShadow: '1px 1px 2px rgba(0,0,0,0.5)' };
+            return <span className={className} style={styles}>{value}</span>;
+        });
+
+        const ScrollDigit = memo(({ value, heightStr = '1em' }) => {
+          const isNumber = !isNaN(Number(value)); if (!isNumber) return <span className="inline-block">{value}</span>;
+          return (<div className="inline-block relative overflow-hidden align-bottom" style={{ height: heightStr, width: '0.6em' }}><div className="flex flex-col transition-transform duration-500 ease-in-out absolute left-0 w-full" style={{ transform: `translateY(-${Number(value) * 10}%)` }}>{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (<div key={n} style={{ height: heightStr }} className="flex items-center justify-center">{n}</div>))}</div></div>);
+        });
+
+        const VolumetricDigit = memo(({ value, layerColor = '#555' }) => {
+          const layers = [1, 2, 3, 4, 5]; 
+          return (<div className="inline-block relative mx-2" style={{ transformStyle: 'preserve-3d', transform: 'rotateY(-15deg) rotateX(10deg)' }}><span className="relative z-20 block">{value}</span>{layers.map(i => (<span key={i} className="absolute top-0 left-0 -z-10 select-none" style={{ transform: `translateZ(-${i * 2}px) translate(${i}px, ${i}px)`, color: layerColor, opacity: 0.6 }}>{value}</span>))}</div>);
+        });
+
+        const NeonDigit = memo(({ value }) => <span className="inline-block mx-1" style={{ textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 30px #ff00de, 0 0 40px #ff00de' }}>{value}</span>);
+        const PerspectiveDigit = memo(({ value }) => <div className="inline-block mx-1 origin-bottom" style={{ transform: 'rotateX(45deg) scaleY(1.5)' }}>{value}</div>);
+        const BlurDigit = memo(({ value }) => {
+          const [displayValue, setDisplayValue] = useState(value); const [blurClass, setBlurClass] = useState("blur-none opacity-100");
+          useEffect(() => { if (value === displayValue) return; setBlurClass("blur-sm opacity-50"); const t1 = setTimeout(() => { setDisplayValue(value); setBlurClass("blur-none opacity-100"); }, 200); return () => clearTimeout(t1); }, [value, displayValue]);
+          return <span className={`inline-block transition-all duration-300 ease-out ${blurClass}`}>{displayValue}</span>;
+        });
+        const GlitchDigit = memo(({ value }) => {
+          const [displayValue, setDisplayValue] = useState(value); const chars = "0123456789";
+          useEffect(() => { if (value === displayValue) return; if (isNaN(Number(value))) { setDisplayValue(value); return; } let iterations = 0; const interval = setInterval(() => { setDisplayValue(chars[Math.floor(Math.random() * chars.length)]); iterations++; if (iterations > 3) { clearInterval(interval); setDisplayValue(value); } }, 40); return () => clearInterval(interval); }, [value, displayValue]);
+          return <span className="inline-block w-[0.6em] text-center">{displayValue}</span>;
+        });
+        const Elegant3DDigit = memo(({ value }) => <span className="inline-block mx-1" style={{ textShadow: '1px 1px 0px #555, 2px 2px 0px #444, 3px 3px 0px #333, 4px 4px 5px rgba(0,0,0,0.5)' }}>{value}</span>);
+        const HandwrittenDigit = memo(({ value }) => <span className="inline-block mx-1 relative"><span className="absolute top-0 left-0 text-blue-300 opacity-50 blur-[1px] translate-x-[1px] translate-y-[1px]">{value}</span><span className="relative z-10">{value}</span></span>);
+
+        const AnimatedString = ({ value, style, heightStr = '1em', isAccent = false }) => {
+          const chars = value.split('');
+          if(style.id==='01') return <div className="inline-flex">{chars.map((c, i) => <BlurDigit key={i} value={c} />)}</div>;
+          if(style.id==='05') return <div className="inline-flex">{chars.map((c, i) => <NeonDigit key={i} value={c} />)}</div>;
+          if(style.id==='06') return <div className="inline-flex" style={{ perspective: '300px' }}>{chars.map((c, i) => <PerspectiveDigit key={i} value={c} />)}</div>;
+          if(style.id==='09' || style.id==='11') return <div className="inline-flex overflow-hidden h-[1em]">{chars.map((c, i) => <ScrollDigit key={i} value={c} heightStr={heightStr} />)}</div>;
+          if(style.id==='10' || style.id==='16' || style.id==='25') return <div className="inline-flex">{chars.map((c, i) => <GlitchDigit key={i} value={c} />)}</div>;
+          if(style.id==='12') return <div className="inline-flex">{chars.map((c, i) => <FlipDigit key={i} value={c} />)}</div>;
+          if(style.id==='14') return <div className="inline-flex">{chars.map((c, i) => <HandwrittenDigit key={i} value={c} />)}</div>;
+          if(style.id==='15') return <div className="inline-flex">{chars.map((c, i) => <Elegant3DDigit key={i} value={c} />)}</div>;
+          if(style.id==='19' || style.id==='21') return <div className="inline-flex" style={{ perspective: '800px' }}>{chars.map((c, i) => <VolumetricDigit key={i} value={c} layerColor={style.layerColor} />)}</div>;
+          if(['28','29','30','31','32'].includes(style.id)) return <div className="inline-flex">{chars.map((c, i) => <ExtrudedDigit key={i} value={c} />)}</div>;
+          return <div className="inline-flex">{chars.map((c, i) => <StaticStyledDigit key={i} value={c} styleId={style.id} isAccent={isAccent} customCSS={style.customCSS} />)}</div>;
+        };
+
+        // --- MAIN APP ---
+
+        const App = () => {
+          const [styleIndex, setStyleIndex] = useState(0); const [isRunning, setIsRunning] = useState(false); const [elapsedMs, setElapsedMs] = useState(0); const [accumulatedCost, setAccumulatedCost] = useState(0); const [lastCheckpointMs, setLastCheckpointMs] = useState(0); const [personCount, setPersonCount] = useState(5); const [hourlyRate, setHourlyRate] = useState(50); const [showSettings, setShowSettings] = useState(false);
+          const startTimeRef = useRef(null); const requestRef = useRef(null);
+          const currentStyle = STYLES[styleIndex];
+
+          const updatePersonCount = (newCount) => { const currentSegmentDuration = elapsedMs - lastCheckpointMs; const segmentCost = (currentSegmentDuration * personCount * hourlyRate) / 3600000; setAccumulatedCost(prev => prev + segmentCost); setLastCheckpointMs(elapsedMs); setPersonCount(newCount); };
+          const updateHourlyRate = (newRate) => { const currentSegmentDuration = elapsedMs - lastCheckpointMs; const segmentCost = (currentSegmentDuration * personCount * hourlyRate) / 3600000; setAccumulatedCost(prev => prev + segmentCost); setLastCheckpointMs(elapsedMs); setHourlyRate(newRate); };
+          const totalCost = useMemo(() => { const currentSegmentDuration = elapsedMs - lastCheckpointMs; const currentSegmentCost = (currentSegmentDuration * personCount * hourlyRate) / 3600000; return accumulatedCost + currentSegmentCost; }, [elapsedMs, accumulatedCost, lastCheckpointMs, personCount, hourlyRate]);
+
+          const costString = totalCost.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+          const formatTime = (ms) => { const hours = Math.floor(ms / 3600000); const minutes = Math.floor((ms % 3600000) / 60000); const seconds = Math.floor((ms % 60000) / 1000); const mss = Math.floor((ms % 1000) / 10); return { h: hours.toString().padStart(2, '0'), m: minutes.toString().padStart(2, '0'), s: seconds.toString().padStart(2, '0'), ms: mss.toString().padStart(2, '0') }; };
+          const timeDisplay = formatTime(elapsedMs);
+
+          const animate = (time) => { if (startTimeRef.current !== null) { setElapsedMs(time - startTimeRef.current); requestRef.current = requestAnimationFrame(animate); } };
+          useEffect(() => { if (isRunning) { const now = performance.now(); startTimeRef.current = now - elapsedMs; requestRef.current = requestAnimationFrame(animate); } else { if (requestRef.current) cancelAnimationFrame(requestRef.current); startTimeRef.current = null; } return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); }; }, [isRunning]);
+
+          const handleStartStop = () => { if (isRunning) { const currentSegmentDuration = elapsedMs - lastCheckpointMs; const segmentCost = (currentSegmentDuration * personCount * hourlyRate) / 3600000; setAccumulatedCost(prev => prev + segmentCost); setLastCheckpointMs(elapsedMs); } setIsRunning(!isRunning); };
+          const handleReset = () => { setIsRunning(false); setElapsedMs(0); setAccumulatedCost(0); setLastCheckpointMs(0); startTimeRef.current = null; };
+          const cycleStyle = () => { setStyleIndex((prev) => (prev + 1) % STYLES.length); };
+
+          const containerStyle = { ...(currentStyle.customCSS || {}) };
+          const textTextureStyle = currentStyle.textImage ? { backgroundImage: `url(${currentStyle.textImage})`, backgroundSize: 'cover', backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' } : {};
+          const commonClasses = `flex flex-col items-center justify-center w-full h-full p-4 transition-all duration-500 ease-in-out relative z-10 ${currentStyle.fontFamily} ${currentStyle.textClass}`;
+
+          const TimeBlock = ({ scale = 1 }) => (
+            <div className={`flex items-baseline justify-center tracking-wider leading-none relative z-10`} style={{ fontSize: `${12 * scale}vw`, ...textTextureStyle }}>
+              <AnimatedString value={timeDisplay.h} style={currentStyle} heightStr={`${12 * scale}vw`} /><span className="opacity-50 mx-1">:</span>
+              <AnimatedString value={timeDisplay.m} style={currentStyle} heightStr={`${12 * scale}vw`} /><span className="opacity-50 mx-1">:</span>
+              <AnimatedString value={timeDisplay.s} style={currentStyle} heightStr={`${12 * scale}vw`} /><span className="text-[0.3em] opacity-60 ml-4 font-normal w-24 inline-block tabular-nums text-left">{timeDisplay.ms}</span>
+            </div>
+          );
+
+          const CostBlock = ({ scale = 1 }) => (
+            <div className={`${currentStyle.accentClass} font-bold tracking-tight leading-none flex items-baseline justify-center relative z-10`} style={{ fontSize: `${14 * scale}vw`, ...textTextureStyle }}>
+              <AnimatedString value={costString} style={currentStyle} heightStr={`${14 * scale}vw`} isAccent={true} />
+            </div>
+          );
+
+          return (
+            <div className={`w-screen h-screen overflow-hidden transition-all duration-700 ${currentStyle.bgClass} relative`} style={containerStyle}>
+              <div className={`absolute top-4 left-4 z-40 text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-50 px-3 py-1 border border-current rounded-full ${currentStyle.textClass}`}>Style #{currentStyle.id} — {currentStyle.name}</div>
+              <BackgroundRenderer style={currentStyle} elapsedMs={elapsedMs} />
+              <div className={`${commonClasses} gap-4`}>
+                  <div className={`${currentStyle.containerClass || ''} w-full max-w-7xl text-center`}><span className="block text-2xl font-bold mb-4 uppercase opacity-70 tracking-widest">Time Elapsed</span><TimeBlock scale={0.9} /></div>
+                  <div className="w-full h-px bg-current opacity-20 max-w-4xl my-2"></div>
+                  <div className={`${currentStyle.containerClass || ''} w-full max-w-7xl text-center mt-2 z-10 ${currentStyle.accentClass}`}><span className="block text-2xl font-bold mb-4 uppercase opacity-70 tracking-widest">Cost Incurred</span><CostBlock scale={1} /></div>
+              </div>
+              <Controls isRunning={isRunning} onStartStop={handleStartStop} onReset={handleReset} personCount={personCount} setPersonCount={updatePersonCount} hourlyRate={hourlyRate} setHourlyRate={updateHourlyRate} currentStyle={currentStyle} onStyleChange={cycleStyle} showSettings={showSettings} toggleSettings={() => setShowSettings(!showSettings)} />
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
